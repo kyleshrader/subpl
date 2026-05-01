@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html><head><title>SubPL</title>
+  <link rel="stylesheet" href="/css/form.css">
+</head><body>
+  <h1>SubPL</h1>
+  <p>Logged in. <a href="/logout">Logout</a></p>
+  <div id="resumeBanner" style="display:none; background:#1a1a2e; border:1px solid #c00; border-radius:6px; padding:16px; margin-bottom:20px;">
+    <strong style="color:#fff;">Unfinished run detected</strong>
+    <p id="resumeInfo" style="font-size:13px; color:#aaa; margin:6px 0 12px;"></p>
+    <button onclick="doResume()" style="padding:8px 24px; background:#c00; color:#fff; border:none; border-radius:4px; cursor:pointer; font-size:14px;">Resume</button>
+    <a href="/discard-progress" style="margin-left:12px; color:#888; font-size:13px;">Discard</a>
+  </div>
+  <form id="form">
+    <label>Date Filter Mode</label>
+    <div class="tabs" id="modeTabs">
+      <button type="button" data-mode="range" class="active">Range</button>
+      <button type="button" data-mode="since">Since</button>
+      <button type="button" data-mode="days">Last N Days</button>
+      <button type="button" data-mode="year">Year</button>
+      <button type="button" data-mode="month">Month</button>
+    </div>
+    <input type="hidden" name="mode" id="modeInput" value="range">
+
+    <div class="mode-fields active" id="fields-range">
+      <label>Start</label>
+      <input type="datetime-local" name="startDate" id="startDate">
+      <label>End</label>
+      <input type="datetime-local" name="endDate" id="endDate">
+    </div>
+
+    <div class="mode-fields" id="fields-since">
+      <label>Since</label>
+      <input type="datetime-local" name="sinceDate">
+      <div class="hint">All videos from this date/time until now.</div>
+    </div>
+
+    <div class="mode-fields" id="fields-days">
+      <label>Number of Days</label>
+      <input type="number" name="days" min="1" max="3650" value="30">
+      <div class="hint">Videos from the last N days.</div>
+    </div>
+
+    <div class="mode-fields" id="fields-year">
+      <label>Year</label>
+      <select name="year" id="yearSelect"></select>
+      <div class="hint">All videos from the selected year.</div>
+    </div>
+
+    <div class="mode-fields" id="fields-month">
+      <label>Month</label>
+      <input type="month" name="month" value="2024-01">
+      <div class="hint">All videos from the selected month.</div>
+    </div>
+
+    <label>Playlist Title</label>
+    <input type="text" name="title" id="titleInput" required value="">
+
+    <details id="channelSection">
+      <summary>Channels <span id="channelCount"></span></summary>
+      <div id="channelControls">
+        <button type="button" id="selectAll">All</button>
+        <button type="button" id="selectNone">None</button>
+        <input type="text" id="channelFilter" placeholder="Filter channels...">
+      </div>
+      <div id="channelList"></div>
+    </details>
+
+    <button type="submit">Create Playlist</button>
+  </form>
+  <div class="log-tabs" id="logTabs">
+    <button type="button" class="active" data-log="output">Output</button>
+    <button type="button" data-log="quota">Quota</button>
+  </div>
+  <div id="status"></div>
+  <script src="/js/form.js"></script>
+</body></html>

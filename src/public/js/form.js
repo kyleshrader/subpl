@@ -1,0 +1,292 @@
+// Populate year select dynamically
+(function () {
+  const sel = document.getElementById("yearSelect");
+  for (let i = 0; i < 10; i++) {
+    const y = new Date().getFullYear() - i;
+    const opt = document.createElement("option");
+    opt.value = y;
+    opt.textContent = y;
+    if (y === new Date().getFullYear()) opt.selected = true;
+    sel.appendChild(opt);
+  }
+})();
+
+// Default range dates: today 00:00 to now
+(function () {
+  function toLocal(d) {
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  }
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  document.getElementById("startDate").value = toLocal(todayStart);
+  document.getElementById("endDate").value = toLocal(now);
+})();
+
+function fmt(d) {
+  return (
+    (d.getMonth() + 1).toString().padStart(2, "0") +
+    "/" +
+    d.getDate().toString().padStart(2, "0")
+  );
+}
+
+function getDateRange() {
+  const mode = document.getElementById("modeInput").value;
+  let start, end;
+  if (mode === "range") {
+    start = new Date(document.querySelector("[name=startDate]").value);
+    end = new Date(document.querySelector("[name=endDate]").value);
+  } else if (mode === "since") {
+    start = new Date(document.querySelector("[name=sinceDate]").value);
+    end = new Date();
+  } else if (mode === "days") {
+    const days = parseInt(document.querySelector("[name=days]").value) || 30;
+    end = new Date();
+    start = new Date();
+    start.setDate(start.getDate() - days);
+  } else if (mode === "year") {
+    const y = parseInt(document.querySelector("[name=year]").value);
+    start = new Date(y, 0, 1);
+    end = new Date(y, 11, 31);
+  } else if (mode === "month") {
+    const [y, m] = document
+      .querySelector("[name=month]")
+      .value.split("-")
+      .map(Number);
+    start = new Date(y, m - 1, 1);
+    end = new Date(y, m, 0);
+  }
+  return { start, end };
+}
+
+function updateTitle() {
+  const { start, end } = getDateRange();
+  if (start && end && !isNaN(start) && !isNaN(end)) {
+    document.getElementById("titleInput").value =
+      "Subscriptions " + fmt(start) + " - " + fmt(end);
+  }
+}
+
+const tabs = document.querySelectorAll("#modeTabs button");
+const modeInput = document.getElementById("modeInput");
+tabs.forEach((tab) => {
+  tab.addEventListener("click", () => {
+    tabs.forEach((t) => t.classList.remove("active"));
+    tab.classList.add("active");
+    const mode = tab.dataset.mode;
+    modeInput.value = mode;
+    document
+      .querySelectorAll(".mode-fields")
+      .forEach((f) => f.classList.remove("active"));
+    document.getElementById("fields-" + mode).classList.add("active");
+    updateTitle();
+  });
+});
+document
+  .querySelectorAll(
+    "input[type=datetime-local],input[type=month],input[type=number],select[name=year]"
+  )
+  .forEach((el) => {
+    el.addEventListener("change", updateTitle);
+    el.addEventListener("input", updateTitle);
+  });
+updateTitle();
+
+// Check for resumable progress
+fetch("/progress")
+  .then((r) => r.json())
+  .then((p) => {
+    if (!p) return;
+    const banner = document.getElementById("resumeBanner");
+    const info = document.getElementById("resumeInfo");
+    if (p.phase === "adding" && p.total) {
+      info.textContent =
+        '"' + p.title + '" — ' + p.added + "/" + p.total + " videos added.";
+    } else {
+      info.textContent =
+        '"' + p.title + '" — paused during channel scanning.';
+    }
+    banner.style.display = "block";
+  });
+
+// Channel selection
+(function () {
+  let allChannels = [];
+  const list = document.getElementById("channelList");
+  const countEl = document.getElementById("channelCount");
+  const filterInput = document.getElementById("channelFilter");
+
+  function updateCount() {
+    const checked = list.querySelectorAll('input[type="checkbox"]:checked').length;
+    countEl.textContent = "(" + checked + "/" + allChannels.length + ")";
+  }
+
+  function renderChannels(filter) {
+    const lc = (filter || "").toLowerCase();
+    list.innerHTML = "";
+    allChannels.forEach((ch) => {
+      if (lc && !ch.title.toLowerCase().includes(lc)) return;
+      const div = document.createElement("div");
+      div.className = "channel-item";
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.id = "ch-" + ch.id;
+      cb.value = ch.id;
+      cb.checked = ch.selected;
+      cb.addEventListener("change", () => {
+        ch.selected = cb.checked;
+        updateCount();
+        saveSelection();
+      });
+      const lbl = document.createElement("label");
+      lbl.htmlFor = cb.id;
+      const link = document.createElement("a");
+      link.href = "https://www.youtube.com/channel/" + ch.id;
+      link.target = "_blank";
+      link.rel = "noopener";
+      link.textContent = ch.title;
+      lbl.appendChild(link);
+      div.appendChild(cb);
+      div.appendChild(lbl);
+      list.appendChild(div);
+    });
+    updateCount();
+  }
+
+  function saveSelection() {
+    const selected = allChannels.filter((c) => c.selected).map((c) => c.id);
+    const body =
+      selected.length === allChannels.length
+        ? { selectedChannels: null }
+        : { selectedChannels: selected };
+    fetch("/channels", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  }
+
+  fetch("/channels")
+    .then((r) => r.json())
+    .then((data) => {
+      if (!data.channels || !data.channels.length) {
+        countEl.textContent = "(no subscriptions cached yet)";
+        return;
+      }
+      const selSet = data.selectedChannels
+        ? new Set(data.selectedChannels)
+        : null;
+      allChannels = data.channels.map((ch) => ({
+        ...ch,
+        selected: selSet ? selSet.has(ch.id) : true,
+      }));
+      renderChannels("");
+    });
+
+  filterInput.addEventListener("input", () => {
+    renderChannels(filterInput.value);
+  });
+
+  document.getElementById("selectAll").addEventListener("click", () => {
+    allChannels.forEach((c) => (c.selected = true));
+    renderChannels(filterInput.value);
+    saveSelection();
+  });
+
+  document.getElementById("selectNone").addEventListener("click", () => {
+    allChannels.forEach((c) => (c.selected = false));
+    renderChannels(filterInput.value);
+    saveSelection();
+  });
+})();
+
+// Log filtering
+const outputLines = [];
+const quotaLines = [];
+let activeLog = "output";
+
+function renderLog() {
+  const status = document.getElementById("status");
+  const lines = activeLog === "quota" ? quotaLines : outputLines;
+  status.textContent = lines.join("\n");
+  status.scrollTop = status.scrollHeight;
+}
+
+function processChunk(text) {
+  const lines = text.split("\n");
+  for (const line of lines) {
+    if (!line) continue;
+    const plMatch = line.match(/PLAYLIST_URL:(\S+)/);
+    if (plMatch) { window.open(plMatch[1], "_blank"); continue; }
+    if (line.startsWith("QUOTA:")) {
+      quotaLines.push(line.slice(6));
+    } else {
+      outputLines.push(line);
+    }
+  }
+  renderLog();
+}
+
+function clearLog() {
+  outputLines.length = 0;
+  quotaLines.length = 0;
+  renderLog();
+}
+
+document.querySelectorAll("#logTabs button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("#logTabs button").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    activeLog = btn.dataset.log;
+    renderLog();
+  });
+});
+
+async function doResume() {
+  const btn = document.querySelector("#resumeBanner button");
+  btn.disabled = true;
+  btn.textContent = "Resuming...";
+  clearLog();
+  outputLines.push("Resuming...");
+  renderLog();
+  document.getElementById("resumeBanner").style.display = "none";
+
+  const res = await fetch("/run?resume=1");
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    processChunk(decoder.decode(value));
+  }
+  btn.disabled = false;
+  btn.textContent = "Resume";
+}
+window.doResume = doResume;
+
+document.getElementById("form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = e.target.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  btn.textContent = "Working...";
+  clearLog();
+  outputLines.push("Starting...");
+  renderLog();
+
+  const fd = new FormData(e.target);
+  const params = new URLSearchParams();
+  for (const [k, v] of fd) params.set(k, v);
+
+  const res = await fetch("/run?" + params.toString());
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    processChunk(decoder.decode(value));
+  }
+
+  btn.disabled = false;
+  btn.textContent = "Create Playlist";
+});

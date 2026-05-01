@@ -1,0 +1,22 @@
+body {
+  font-family: system-ui;
+  max-width: 500px;
+  margin: 80px auto;
+  text-align: center;
+  background: #0f0f0f;
+  color: #e0e0e0;
+}
+
+a.btn {
+  display: inline-block;
+  padding: 12px 32px;
+  background: #c00;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 6px;
+  font-size: 16px;
+}
+
+a.btn:hover {
+  background: #e00;
+}
