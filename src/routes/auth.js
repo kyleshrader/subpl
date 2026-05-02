@@ -106,6 +106,80 @@ function registerRoutes(app) {
     saveCache(cache);
     res.json({ ok: true });
   });
+
+  // Collections — migrate legacy selectedChannels on first access
+  function ensureCollections(cache) {
+    if (!cache.channelCollections) {
+      cache.channelCollections = [];
+      if (Array.isArray(cache.selectedChannels) && cache.selectedChannels.length > 0) {
+        cache.channelCollections.push({
+          id: Date.now().toString(),
+          name: "Default",
+          channels: cache.selectedChannels,
+        });
+        return true; // needs save
+      }
+    }
+    return false;
+  }
+
+  app.get("/collections", (req, res) => {
+    if (!isAuthenticated()) return res.status(401).json({ error: "Not authenticated" });
+    const cache = loadCache();
+    if (ensureCollections(cache)) saveCache(cache);
+    res.json({ collections: cache.channelCollections });
+  });
+
+  app.post("/collections", (req, res) => {
+    if (!isAuthenticated()) return res.status(401).json({ error: "Not authenticated" });
+    const { name, channels } = req.body;
+    if (!name || typeof name !== "string" || !name.trim()) {
+      return res.status(400).json({ error: "Name required" });
+    }
+    if (!Array.isArray(channels)) {
+      return res.status(400).json({ error: "channels must be an array" });
+    }
+    const cache = loadCache();
+    ensureCollections(cache);
+    const collection = { id: Date.now().toString(), name: name.trim(), channels };
+    cache.channelCollections.push(collection);
+    saveCache(cache);
+    res.json(collection);
+  });
+
+  app.put("/collections/:id", (req, res) => {
+    if (!isAuthenticated()) return res.status(401).json({ error: "Not authenticated" });
+    const { id } = req.params;
+    const { name, channels } = req.body;
+    const cache = loadCache();
+    if (!cache.channelCollections) return res.status(404).json({ error: "Not found" });
+    const idx = cache.channelCollections.findIndex((c) => c.id === id);
+    if (idx === -1) return res.status(404).json({ error: "Not found" });
+    if (name !== undefined) {
+      if (typeof name !== "string" || !name.trim()) {
+        return res.status(400).json({ error: "Invalid name" });
+      }
+      cache.channelCollections[idx].name = name.trim();
+    }
+    if (channels !== undefined) {
+      if (!Array.isArray(channels)) return res.status(400).json({ error: "channels must be an array" });
+      cache.channelCollections[idx].channels = channels;
+    }
+    saveCache(cache);
+    res.json(cache.channelCollections[idx]);
+  });
+
+  app.delete("/collections/:id", (req, res) => {
+    if (!isAuthenticated()) return res.status(401).json({ error: "Not authenticated" });
+    const { id } = req.params;
+    const cache = loadCache();
+    if (!cache.channelCollections) return res.status(404).json({ error: "Not found" });
+    const idx = cache.channelCollections.findIndex((c) => c.id === id);
+    if (idx === -1) return res.status(404).json({ error: "Not found" });
+    cache.channelCollections.splice(idx, 1);
+    saveCache(cache);
+    res.json({ ok: true });
+  });
 }
 
 module.exports = registerRoutes;

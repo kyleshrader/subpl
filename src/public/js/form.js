@@ -109,12 +109,16 @@ fetch("/progress")
     banner.style.display = "block";
   });
 
-// Channel selection
+// Channel selection + Collections
 (function () {
   let allChannels = [];
+  let collections = [];
+  let activeCollectionId = null;
+
   const list = document.getElementById("channelList");
   const countEl = document.getElementById("channelCount");
   const filterInput = document.getElementById("channelFilter");
+  const collectionSelect = document.getElementById("collectionSelect");
 
   function updateCount() {
     const checked = list.querySelectorAll('input[type="checkbox"]:checked').length;
@@ -166,22 +170,135 @@ fetch("/progress")
     });
   }
 
-  fetch("/channels")
-    .then((r) => r.json())
-    .then((data) => {
-      if (!data.channels || !data.channels.length) {
-        countEl.textContent = "(no subscriptions cached yet)";
-        return;
-      }
-      const selSet = data.selectedChannels
-        ? new Set(data.selectedChannels)
-        : null;
-      allChannels = data.channels.map((ch) => ({
-        ...ch,
-        selected: selSet ? selSet.has(ch.id) : true,
-      }));
-      renderChannels("");
+  function getSelectedIds() {
+    return allChannels.filter((c) => c.selected).map((c) => c.id);
+  }
+
+  function applyCollection(col) {
+    const selSet = new Set(col.channels);
+    allChannels.forEach((c) => { c.selected = selSet.has(c.id); });
+    renderChannels(filterInput.value);
+    saveSelection();
+  }
+
+  function renderCollections() {
+    const current = collectionSelect.value;
+    collectionSelect.innerHTML = '<option value="">— collections —</option>';
+    collections.forEach((c) => {
+      const opt = document.createElement("option");
+      opt.value = c.id;
+      opt.textContent = c.name;
+      collectionSelect.appendChild(opt);
     });
+    // restore selection if still valid
+    if (activeCollectionId && collections.find((c) => c.id === activeCollectionId)) {
+      collectionSelect.value = activeCollectionId;
+    } else if (current && collections.find((c) => c.id === current)) {
+      collectionSelect.value = current;
+    }
+  }
+
+  document.getElementById("loadCollection").addEventListener("click", () => {
+    const id = collectionSelect.value;
+    if (!id) return;
+    const col = collections.find((c) => c.id === id);
+    if (!col) return;
+    activeCollectionId = id;
+    applyCollection(col);
+  });
+
+  document.getElementById("saveAsNew").addEventListener("click", () => {
+    const name = prompt("Collection name:");
+    if (!name || !name.trim()) return;
+    const channels = getSelectedIds();
+    fetch("/collections", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name.trim(), channels }),
+    })
+      .then((r) => r.json())
+      .then((col) => {
+        if (col.error) { alert(col.error); return; }
+        collections.push(col);
+        activeCollectionId = col.id;
+        renderCollections();
+      });
+  });
+
+  document.getElementById("updateCollection").addEventListener("click", () => {
+    const id = collectionSelect.value;
+    if (!id) { alert("Select a collection first."); return; }
+    const channels = getSelectedIds();
+    fetch("/collections/" + id, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ channels }),
+    })
+      .then((r) => r.json())
+      .then((col) => {
+        if (col.error) { alert(col.error); return; }
+        const idx = collections.findIndex((c) => c.id === id);
+        if (idx !== -1) collections[idx] = col;
+        renderCollections();
+      });
+  });
+
+  document.getElementById("renameCollection").addEventListener("click", () => {
+    const id = collectionSelect.value;
+    if (!id) { alert("Select a collection first."); return; }
+    const col = collections.find((c) => c.id === id);
+    const name = prompt("New name:", col ? col.name : "");
+    if (!name || !name.trim()) return;
+    fetch("/collections/" + id, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name.trim() }),
+    })
+      .then((r) => r.json())
+      .then((updated) => {
+        if (updated.error) { alert(updated.error); return; }
+        const idx = collections.findIndex((c) => c.id === id);
+        if (idx !== -1) collections[idx] = updated;
+        renderCollections();
+      });
+  });
+
+  document.getElementById("deleteCollection").addEventListener("click", () => {
+    const id = collectionSelect.value;
+    if (!id) { alert("Select a collection first."); return; }
+    const col = collections.find((c) => c.id === id);
+    if (!confirm('Delete collection "' + (col ? col.name : id) + '"?')) return;
+    fetch("/collections/" + id, { method: "DELETE" })
+      .then((r) => r.json())
+      .then((result) => {
+        if (result.error) { alert(result.error); return; }
+        collections = collections.filter((c) => c.id !== id);
+        if (activeCollectionId === id) activeCollectionId = null;
+        renderCollections();
+      });
+  });
+
+  // Load channels and collections in parallel
+  Promise.all([
+    fetch("/channels").then((r) => r.json()),
+    fetch("/collections").then((r) => r.json()),
+  ]).then(([channelData, colData]) => {
+    collections = colData.collections || [];
+    renderCollections();
+
+    if (!channelData.channels || !channelData.channels.length) {
+      countEl.textContent = "(no subscriptions cached yet)";
+      return;
+    }
+    const selSet = channelData.selectedChannels
+      ? new Set(channelData.selectedChannels)
+      : null;
+    allChannels = channelData.channels.map((ch) => ({
+      ...ch,
+      selected: selSet ? selSet.has(ch.id) : true,
+    }));
+    renderChannels("");
+  });
 
   filterInput.addEventListener("input", () => {
     renderChannels(filterInput.value);

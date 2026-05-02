@@ -143,6 +143,43 @@ a {
   border-bottom: 1px solid #555;
 }
 
+#collectionsBar {
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+#collectionSelect {
+  width: 100%;
+  font-size: 13px;
+  padding: 5px 8px;
+  margin: 0;
+}
+
+#collectionActions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+#collectionActions button {
+  margin: 0;
+  padding: 4px 10px;
+  font-size: 12px;
+  background: #333;
+  border-radius: 4px;
+  color: #ccc;
+  flex: 1;
+  min-width: 0;
+}
+
+#collectionActions button:hover {
+  background: #444;
+  color: #fff;
+}
+
 #channelCount {
   color: #888;
   font-weight: normal;
