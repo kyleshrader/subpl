@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const { google } = require("googleapis");
 const { TOKEN_PATH } = require("../config");
-const { getOAuth2Client, isAuthenticated } = require("../auth");
+const { getOAuth2Client, getAuthenticatedClient, isAuthenticated } = require("../auth");
 const { loadCache, saveCache } = require("../cache");
 const { loadProgress, clearProgress } = require("../progress");
 
@@ -72,9 +72,7 @@ function registerRoutes(app) {
     const missing = cache.subscriptions.filter(id => !cache.channelNames[id]);
     if (missing.length > 0) {
       try {
-        const client = getOAuth2Client();
-        const token = JSON.parse(fs.readFileSync(TOKEN_PATH));
-        client.setCredentials(token);
+        const client = getAuthenticatedClient();
         const youtube = google.youtube({ version: "v3", auth: client });
         for (let i = 0; i < missing.length; i += 50) {
           const chunk = missing.slice(i, i + 50);

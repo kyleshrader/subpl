@@ -9,6 +9,19 @@ function getOAuth2Client() {
   return new google.auth.OAuth2(client_id, client_secret, REDIRECT_URI);
 }
 
+function getAuthenticatedClient() {
+  const client = getOAuth2Client();
+  const token = JSON.parse(fs.readFileSync(TOKEN_PATH));
+  client.setCredentials(token);
+  client.on("tokens", (newTokens) => {
+    console.log("Token refreshed:", newTokens.access_token ? "new access_token received" : "no access_token");
+    const existing = JSON.parse(fs.readFileSync(TOKEN_PATH));
+    const merged = { ...existing, ...newTokens };
+    fs.writeFileSync(TOKEN_PATH, JSON.stringify(merged));
+  });
+  return client;
+}
+
 function isAuthenticated() {
   if (!fs.existsSync(TOKEN_PATH)) return false;
   try {
@@ -19,4 +32,4 @@ function isAuthenticated() {
   }
 }
 
-module.exports = { getOAuth2Client, isAuthenticated };
+module.exports = { getOAuth2Client, getAuthenticatedClient, isAuthenticated };

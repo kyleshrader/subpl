@@ -1,7 +1,5 @@
-const fs = require("fs");
 const { google } = require("googleapis");
-const { TOKEN_PATH } = require("../config");
-const { isAuthenticated, getOAuth2Client } = require("../auth");
+const { isAuthenticated, getAuthenticatedClient } = require("../auth");
 const { loadCache } = require("../cache");
 const { loadProgress, saveProgress, clearProgress } = require("../progress");
 const {
@@ -88,9 +86,7 @@ function registerRoutes(app) {
 
     try {
       const cache = loadCache();
-      const client = getOAuth2Client();
-      const token = JSON.parse(fs.readFileSync(TOKEN_PATH));
-      client.setCredentials(token);
+      const client = getAuthenticatedClient();
       const youtube = google.youtube({ version: "v3", auth: client });
       resetQuota();
 
