@@ -141,14 +141,18 @@ function registerRoutes(app) {
         }
 
         send(`Total videos in date range: ${vids.length}`);
-        send("Fetching durations to filter Shorts...");
-        const vidIds = vids.map(v => v.id);
-        const durations = await getDurations(youtube, vidIds, cache);
-
-        vids = vids.filter(v => durations[v.id] > 120);
+        const filterShorts = req.query.filterShorts !== "0";
+        if (filterShorts) {
+          send("Fetching durations to filter Shorts...");
+          const vidIds = vids.map(v => v.id);
+          const durations = await getDurations(youtube, vidIds, cache);
+          vids = vids.filter(v => durations[v.id] > 120);
+        }
         vids.sort((a, b) => new Date(a.publishedAt) - new Date(b.publishedAt));
         filtered = vids.map(v => v.id);
-        send(`After Shorts filter: ${filtered.length} videos (sorted oldest first)`);
+        send(filterShorts
+          ? `After Shorts filter: ${filtered.length} videos (sorted oldest first)`
+          : `${filtered.length} videos (sorted oldest first, Shorts included)`);
         sendQuota();
 
         send(`Creating playlist "${title}"...`);

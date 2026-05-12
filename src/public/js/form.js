@@ -393,6 +393,8 @@ document.getElementById("form").addEventListener("submit", async (e) => {
   const fd = new FormData(e.target);
   const params = new URLSearchParams();
   for (const [k, v] of fd) params.set(k, v);
+  // Checkboxes are omitted from FormData when unchecked — set explicitly
+  params.set("filterShorts", document.getElementById("filterShorts").checked ? "1" : "0");
 
   const res = await fetch("/run?" + params.toString());
   const reader = res.body.getReader();
