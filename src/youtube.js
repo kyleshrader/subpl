@@ -1,15 +1,5 @@
 const { saveCache } = require("./cache");
-
-let quotaUsed = 0;
-const quotaLog = [];
-
-function trackQuota(method, cost) {
-  quotaUsed += cost;
-  quotaLog.push({ method, cost, total: quotaUsed, time: new Date().toLocaleTimeString() });
-}
-
-function getQuota() { return { used: quotaUsed, log: [...quotaLog] }; }
-function resetQuota() { quotaUsed = 0; quotaLog.length = 0; }
+const { trackQuota, getQuota } = require("./quota");
 
 function isQuotaError(err) {
   return err?.code === 403 || err?.status === 403 ||
@@ -173,5 +163,4 @@ module.exports = {
   createPlaylist,
   addToPlaylist,
   getQuota,
-  resetQuota,
 };

@@ -11,8 +11,8 @@ const {
   createPlaylist,
   addToPlaylist,
   getQuota,
-  resetQuota,
 } = require("../youtube");
+const { DAILY_LIMIT } = require("../quota");
 
 function parseDateRange(query) {
   const mode = query.mode;
@@ -51,6 +51,10 @@ function parseDateRange(query) {
 }
 
 function registerRoutes(app) {
+  app.get("/quota", (req, res) => {
+    res.json(getQuota());
+  });
+
   app.get("/run", async (req, res) => {
     if (!isAuthenticated()) return res.status(401).send("Not authenticated");
 
@@ -81,14 +85,13 @@ function registerRoutes(app) {
     const sendQuota = () => {
       const q = getQuota();
       const recent = q.log.slice(-1)[0];
-      if (recent) send(`QUOTA:${recent.time} | ${recent.method} (+${recent.cost}) — Total: ${q.used}/10,000`);
+      if (recent) send(`QUOTA:${recent.time} | ${recent.method} (+${recent.cost}) — Total: ${q.used}/${DAILY_LIMIT}`);
     };
 
     try {
       const cache = loadCache();
       const client = getAuthenticatedClient();
       const youtube = google.youtube({ version: "v3", auth: client });
-      resetQuota();
 
       let progress = loadProgress();
       let resuming = false;
@@ -190,7 +193,7 @@ function registerRoutes(app) {
       clearProgress();
       send(`Done! Playlist created with ${addCount} videos.`);
       const finalQ = getQuota();
-      send(`QUOTA:Run complete \u2014 ${finalQ.used}/10,000 quota units used`);
+      send(`QUOTA:Run complete \u2014 ${finalQ.used}/${DAILY_LIMIT} quota units used today`);
       send(`PLAYLIST_URL:https://www.youtube.com/playlist?list=${pid}`);
     } catch (err) {
       if (isQuotaError(err)) {
