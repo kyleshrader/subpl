@@ -38,6 +38,38 @@ button {
   cursor: pointer;
 }
 
+.since-input-row {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.since-input-row input {
+  flex: 1;
+}
+
+.since-input-row button {
+  margin-top: 0;
+  padding: 0 10px;
+  background: #2a2a2a;
+  border: 1px solid #555;
+  color: #ccc;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.since-input-row button:hover {
+  background: #3a3a3a;
+  color: #fff;
+}
+
+.since-input-row button.active {
+  background: #c00;
+  color: #fff;
+  border-color: #c00;
+}
+
 button:hover {
   background: #e00;
 }

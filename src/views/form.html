@@ -30,8 +30,13 @@
 
     <div class="mode-fields" id="fields-since">
       <label>Since</label>
-      <input type="datetime-local" name="sinceDate">
-      <div class="hint">All videos from this date/time until now.</div>
+      <div class="since-input-row">
+        <input type="datetime-local" name="sinceDate" id="sinceDate">
+        <button type="button" id="sinceVideoBtn" title="Use a video's publish date" aria-label="Use a video's publish date">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h7A2.5 2.5 0 0 1 16 6.5v1.2l3.4-2.04A1 1 0 0 1 21 6.52v10.96a1 1 0 0 1-1.6.86L16 16.3v1.2A2.5 2.5 0 0 1 13.5 20h-7A2.5 2.5 0 0 1 4 17.5v-11z"/></svg>
+        </button>
+      </div>
+      <div class="hint" id="sinceVideoHint">All videos from this date/time until now.</div>
     </div>
 
     <div class="mode-fields" id="fields-days">

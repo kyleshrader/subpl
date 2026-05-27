@@ -11,15 +11,92 @@
   }
 })();
 
+function toLocalDatetime(d) {
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
+
 // Default range dates: today 00:00 to now
 (function () {
-  function toLocal(d) {
-    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-  }
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  document.getElementById("startDate").value = toLocal(todayStart);
-  document.getElementById("endDate").value = toLocal(now);
+  document.getElementById("startDate").value = toLocalDatetime(todayStart);
+  document.getElementById("endDate").value = toLocalDatetime(now);
+})();
+
+function extractVideoId(input) {
+  if (!input) return null;
+  const trimmed = input.trim();
+  if (/^[A-Za-z0-9_-]{11}$/.test(trimmed)) return trimmed;
+  const m = trimmed.match(/(?:v=|\/shorts\/|\/embed\/|\/v\/|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+
+(function () {
+  const btn = document.getElementById("sinceVideoBtn");
+  const input = document.getElementById("sinceDate");
+  const hint = document.getElementById("sinceVideoHint");
+  const defaultHint = hint.textContent;
+  let videoMode = false;
+  let savedDate = "";
+
+  function enterVideoMode() {
+    savedDate = input.value;
+    input.type = "text";
+    input.value = "";
+    input.placeholder = "Paste YouTube URL or video ID, then press Enter";
+    input.focus();
+    btn.classList.add("active");
+    btn.title = "Cancel";
+    hint.textContent = "Paste a video URL/ID and submit to use its publish date.";
+    videoMode = true;
+  }
+
+  function exitVideoMode(restore) {
+    input.type = "datetime-local";
+    input.placeholder = "";
+    if (restore) input.value = savedDate;
+    btn.classList.remove("active");
+    btn.title = "Use a video's publish date";
+    videoMode = false;
+  }
+
+  async function submitVideo() {
+    const id = extractVideoId(input.value);
+    if (!id) { hint.textContent = "Could not parse a video ID from that input."; return; }
+    input.disabled = true;
+    btn.disabled = true;
+    hint.textContent = "Fetching video info...";
+    try {
+      const res = await fetch("/video-info?id=" + encodeURIComponent(id));
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch {
+        throw new Error(res.status === 404 ? "Route not found — restart the server" : `HTTP ${res.status}`);
+      }
+      if (!res.ok) throw new Error(data.error || "Failed");
+      const published = new Date(data.publishedAt);
+      const since = new Date(published.getTime() - 60_000);
+      exitVideoMode(false);
+      input.value = toLocalDatetime(since);
+      hint.textContent = `Starting with "${data.title}" by ${data.channelTitle}.`;
+      updateTitle();
+    } catch (e) {
+      hint.textContent = "Error: " + e.message;
+    } finally {
+      input.disabled = false;
+      btn.disabled = false;
+    }
+  }
+
+  btn.addEventListener("click", () => {
+    if (videoMode) exitVideoMode(true);
+    else enterVideoMode();
+  });
+
+  input.addEventListener("keydown", (e) => {
+    if (videoMode && e.key === "Enter") { e.preventDefault(); submitVideo(); }
+    else if (videoMode && e.key === "Escape") { e.preventDefault(); exitVideoMode(true); }
+  });
 })();
 
 function fmt(d) {

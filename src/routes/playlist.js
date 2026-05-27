@@ -12,7 +12,7 @@ const {
   addToPlaylist,
   getQuota,
 } = require("../youtube");
-const { DAILY_LIMIT } = require("../quota");
+const { DAILY_LIMIT, trackQuota } = require("../quota");
 
 function parseDateRange(query) {
   const mode = query.mode;
@@ -50,9 +50,39 @@ function parseDateRange(query) {
   return { start, end };
 }
 
+function extractVideoId(input) {
+  if (!input) return null;
+  const trimmed = String(input).trim();
+  if (/^[A-Za-z0-9_-]{11}$/.test(trimmed)) return trimmed;
+  const m = trimmed.match(/(?:v=|\/shorts\/|\/embed\/|\/v\/|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+
 function registerRoutes(app) {
   app.get("/quota", (req, res) => {
     res.json(getQuota());
+  });
+
+  app.get("/video-info", async (req, res) => {
+    if (!isAuthenticated()) return res.status(401).json({ error: "Not authenticated" });
+    const id = extractVideoId(req.query.id || req.query.url);
+    if (!id) return res.status(400).json({ error: "Could not parse video ID" });
+    try {
+      const client = getAuthenticatedClient();
+      const youtube = google.youtube({ version: "v3", auth: client });
+      const r = await youtube.videos.list({ part: "snippet", id });
+      trackQuota("videos.list", 1);
+      const item = r.data.items && r.data.items[0];
+      if (!item) return res.status(404).json({ error: "Video not found" });
+      res.json({
+        id: item.id,
+        title: item.snippet.title,
+        publishedAt: item.snippet.publishedAt,
+        channelTitle: item.snippet.channelTitle,
+      });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
   });
 
   app.get("/run", async (req, res) => {
