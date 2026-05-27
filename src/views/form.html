@@ -23,20 +23,32 @@
 
     <div class="mode-fields active" id="fields-range">
       <label>Start</label>
-      <input type="datetime-local" name="startDate" id="startDate">
+      <div class="datetime-picker-row">
+        <input type="datetime-local" name="startDate" id="startDate">
+        <button type="button" class="video-picker-btn" data-target="startDate" data-direction="before" title="Use a video's publish date" aria-label="Use a video's publish date">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h7A2.5 2.5 0 0 1 16 6.5v1.2l3.4-2.04A1 1 0 0 1 21 6.52v10.96a1 1 0 0 1-1.6.86L16 16.3v1.2A2.5 2.5 0 0 1 13.5 20h-7A2.5 2.5 0 0 1 4 17.5v-11z"/></svg>
+        </button>
+      </div>
+      <div class="hint" data-hint-for="startDate"></div>
       <label>End</label>
-      <input type="datetime-local" name="endDate" id="endDate">
+      <div class="datetime-picker-row">
+        <input type="datetime-local" name="endDate" id="endDate">
+        <button type="button" class="video-picker-btn" data-target="endDate" data-direction="after" title="Use a video's publish date" aria-label="Use a video's publish date">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h7A2.5 2.5 0 0 1 16 6.5v1.2l3.4-2.04A1 1 0 0 1 21 6.52v10.96a1 1 0 0 1-1.6.86L16 16.3v1.2A2.5 2.5 0 0 1 13.5 20h-7A2.5 2.5 0 0 1 4 17.5v-11z"/></svg>
+        </button>
+      </div>
+      <div class="hint" data-hint-for="endDate"></div>
     </div>
 
     <div class="mode-fields" id="fields-since">
       <label>Since</label>
-      <div class="since-input-row">
+      <div class="datetime-picker-row">
         <input type="datetime-local" name="sinceDate" id="sinceDate">
-        <button type="button" id="sinceVideoBtn" title="Use a video's publish date" aria-label="Use a video's publish date">
+        <button type="button" class="video-picker-btn" data-target="sinceDate" data-direction="before" title="Use a video's publish date" aria-label="Use a video's publish date">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h7A2.5 2.5 0 0 1 16 6.5v1.2l3.4-2.04A1 1 0 0 1 21 6.52v10.96a1 1 0 0 1-1.6.86L16 16.3v1.2A2.5 2.5 0 0 1 13.5 20h-7A2.5 2.5 0 0 1 4 17.5v-11z"/></svg>
         </button>
       </div>
-      <div class="hint" id="sinceVideoHint">All videos from this date/time until now.</div>
+      <div class="hint" data-hint-for="sinceDate">All videos from this date/time until now.</div>
     </div>
 
     <div class="mode-fields" id="fields-days">
