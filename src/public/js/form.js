@@ -83,6 +83,7 @@ function attachVideoPicker(btn) {
       input.value = toLocalDatetime(target);
       setHint(`Including "${data.title}" by ${data.channelTitle}.`);
       updateTitle();
+      refreshQuota();
     } catch (e) {
       setHint("Error: " + e.message);
     } finally {
@@ -399,6 +400,80 @@ fetch("/progress")
   });
 })();
 
+// Quota widget
+function setQuotaDisplay(used, limit) {
+  const fill = document.getElementById("quotaWidgetFill");
+  const text = document.getElementById("quotaWidgetText");
+  const pct = Math.min(100, Math.round((used / limit) * 100));
+  fill.style.width = pct + "%";
+  fill.classList.toggle("warn", pct >= 70 && pct < 90);
+  fill.classList.toggle("crit", pct >= 90);
+  text.textContent = used.toLocaleString() + " / " + limit.toLocaleString();
+}
+
+function setQuotaBreakdown(byMethod, used) {
+  const list = document.getElementById("quotaBreakdownList");
+  list.innerHTML = "";
+  const entries = Object.entries(byMethod || {}).sort((a, b) => b[1] - a[1]);
+  if (!entries.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = "No API calls yet today.";
+    list.appendChild(empty);
+    return;
+  }
+  for (const [method, cost] of entries) {
+    const pct = used > 0 ? Math.round((cost / used) * 100) : 0;
+    const row = document.createElement("div");
+    row.className = "quota-breakdown-row";
+    const m = document.createElement("span"); m.className = "qmethod"; m.textContent = method;
+    const c = document.createElement("span"); c.className = "qcost"; c.textContent = cost.toLocaleString();
+    const p = document.createElement("span"); p.className = "qpct"; p.textContent = pct + "%";
+    row.appendChild(m); row.appendChild(c); row.appendChild(p);
+    list.appendChild(row);
+  }
+}
+
+async function refreshQuota() {
+  try {
+    const r = await fetch("/quota");
+    const q = await r.json();
+    setQuotaDisplay(q.used, q.limit);
+    setQuotaBreakdown(q.byMethod, q.used);
+  } catch {}
+}
+refreshQuota();
+
+(function () {
+  const widget = document.getElementById("quotaWidget");
+  const btn = document.getElementById("quotaInfoBtn");
+  const breakdown = document.getElementById("quotaBreakdown");
+  const show = () => widget.classList.add("show-breakdown");
+  const hide = () => widget.classList.remove("show-breakdown");
+  btn.addEventListener("mouseenter", show);
+  btn.addEventListener("focus", show);
+  btn.addEventListener("blur", hide);
+  breakdown.addEventListener("mouseenter", show);
+  widget.addEventListener("mouseleave", hide);
+})();
+
+let quotaPollTimer = null;
+function startQuotaPoll() {
+  if (quotaPollTimer) return;
+  quotaPollTimer = setInterval(refreshQuota, 3000);
+}
+function stopQuotaPoll() {
+  if (!quotaPollTimer) return;
+  clearInterval(quotaPollTimer);
+  quotaPollTimer = null;
+}
+if (!document.hidden) startQuotaPoll();
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) stopQuotaPoll();
+  else { refreshQuota(); startQuotaPoll(); }
+});
+window.addEventListener("focus", refreshQuota);
+
 // Log filtering
 const outputLines = [];
 const quotaLines = [];
@@ -419,6 +494,8 @@ function processChunk(text) {
     if (plMatch) { window.open(plMatch[1], "_blank"); continue; }
     if (line.startsWith("QUOTA:")) {
       quotaLines.push(line.slice(6));
+      const m = line.match(/(\d+)\s*\/\s*(\d+)/);
+      if (m) setQuotaDisplay(parseInt(m[1]), parseInt(m[2]));
     } else {
       outputLines.push(line);
     }
