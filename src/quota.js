@@ -1,7 +1,7 @@
 const fs = require("fs");
 const { QUOTA_PATH } = require("./config");
 
-const DAILY_LIMIT = 10000;
+const DAILY_LIMIT = 100000;
 const MAX_LOG = 200;
 
 function pacificDay(date = new Date()) {
