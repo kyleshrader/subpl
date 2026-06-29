@@ -1,0 +1,17 @@
+# Keep the build context small and keep secrets/state out of the image.
+# (Runtime state is provided via the mounted volume in docker-compose.yml.)
+.git
+node_modules
+.pnp.cjs
+.pnp.loader.mjs
+.yarn/install-state.gz
+
+# Secrets
+client_secret.json
+client_secret.all.json
+
+# Local data
+token.json
+cache.json
+quota.json
+progress.json

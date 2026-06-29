@@ -1,0 +1,16 @@
+services:
+  subpl:
+    build: .
+    image: subpl
+    container_name: subpl
+    ports:
+      - "4440:4440"
+    environment:
+      PORT: "4440"
+      DATA_DIR: /data
+    # Mount the project dir so secrets (client_secret.json) and runtime state
+    # (token.json, cache.json, quota.json, progress.json) live on the host and
+    # persist across rebuilds. The app code runs from /app, state lives in /data.
+    volumes:
+      - ./:/data
+    restart: unless-stopped
